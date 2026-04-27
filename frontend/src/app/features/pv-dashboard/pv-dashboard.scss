@@ -1,0 +1,54 @@
+.pv {
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  .sub {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0 0 1rem;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: #334155;
+    }
+
+    select,
+    input {
+      min-width: 4rem;
+      padding: 0.4rem 0.5rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+    }
+
+    .status {
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+  }
+
+  .error {
+    color: #b91c1c;
+    margin: 0 0 0.5rem;
+  }
+
+  .chart-wrap {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.5rem;
+    background: #f8fafc;
+  }
+}

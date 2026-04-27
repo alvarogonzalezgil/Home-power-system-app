@@ -1,0 +1,40 @@
+<section class="pv">
+  <h1>Theoretical max PV (clear sky)</h1>
+  <p class="sub" *ngIf="metLabel()">{{ metLabel() }}</p>
+
+  <div class="controls">
+    <label>
+      <span>Month</span>
+      <select
+        [ngModel]="month()"
+        (ngModelChange)="onMonth($event)"
+        [attr.aria-label]="'Month'">
+        @for (m of monthOptions; track m) {
+          <option [ngValue]="m">{{ m }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>Day</span>
+      <input
+        type="number"
+        [min]="1"
+        [max]="maxDay()"
+        [ngModel]="day()"
+        (ngModelChange)="onDay($event)"
+        aria-label="Day of month" />
+    </label>
+    <span *ngIf="loading()" class="status">Loading…</span>
+  </div>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <div class="chart-wrap" *ngIf="graphData().length">
+    <plotly-plot
+      [data]="graphData()"
+      [layout]="graphLayout()"
+      [useResizeHandler]="true"
+      [style]="{ position: 'relative', width: '100%', height: '420px' }"
+    />
+  </div>
+</section>

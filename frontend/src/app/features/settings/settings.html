@@ -1,0 +1,65 @@
+<section class="settings">
+  <h1>System settings</h1>
+  <p class="sub">Values are stored in the backend and used for the clear-sky PV model.</p>
+
+  <p *ngIf="loadError()" class="error">{{ loadError() }}</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="grid">
+    <div class="row">
+      <label>
+        <span>Latitude (°)</span>
+        <input type="number" formControlName="latitude" step="0.0000001" />
+      </label>
+      <label>
+        <span>Longitude (°)</span>
+        <input type="number" formControlName="longitude" step="0.0000001" />
+      </label>
+    </div>
+    <div class="row">
+      <label>
+        <span>Tilt (°)</span>
+        <input type="number" formControlName="tilt_deg" step="0.1" />
+      </label>
+      <label>
+        <span>Panel azimuth from N clockwise (°)</span>
+        <input type="number" formControlName="azimuth_deg" step="0.1" />
+      </label>
+    </div>
+    <div class="row">
+      <label>
+        <span>Panel count</span>
+        <input type="number" formControlName="panel_count" min="1" />
+      </label>
+      <label>
+        <span>Panel width (m)</span>
+        <input type="number" formControlName="panel_width_m" step="0.001" min="0.01" />
+      </label>
+      <label>
+        <span>Panel height (m)</span>
+        <input type="number" formControlName="panel_height_m" step="0.001" min="0.01" />
+      </label>
+    </div>
+    <div class="row">
+      <label>
+        <span>DC efficiency (0–1)</span>
+        <input type="number" formControlName="panel_efficiency" step="0.001" min="0.0001" max="1" />
+      </label>
+      <label>
+        <span>Timezone offset (h from UTC)</span>
+        <input type="number" formControlName="timezone_offset_h" step="0.5" min="-12" max="12" />
+      </label>
+      <label>
+        <span>Sample step (min)</span>
+        <input type="number" formControlName="sample_minutes" min="1" max="60" />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="form.invalid || saving()">
+        {{ saving() ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </form>
+
+  <p *ngIf="saveMessage()" class="ok">{{ saveMessage() }}</p>
+</section>

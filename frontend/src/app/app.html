@@ -1,0 +1,10 @@
+<header class="app-header">
+  <a routerLink="/" class="brand">Home power</a>
+  <nav>
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
+    <a routerLink="/settings" routerLinkActive="active">Settings</a>
+  </nav>
+</header>
+<main class="app-main">
+  <router-outlet />
+</main>
