@@ -40,6 +40,55 @@ def test_parse_foxess_timestamp_space_and_z() -> None:
     assert b == datetime(2025, 4, 7, 14, 30, 0, tzinfo=timezone.utc)
 
 
+def test_parse_foxess_timestamp_local_with_offset_suffix_cst() -> None:
+    """CST+0800 example from FoxESS Open API doc."""
+    t = foxess_service.parse_foxess_timestamp("2025-11-25 17:58:16 CST+0800")
+    assert t.astimezone(timezone.utc) == datetime(
+        2025, 11, 25, 9, 58, 16, tzinfo=timezone.utc
+    )
+
+
+def test_parse_foxess_timestamp_uk_bst_suffix() -> None:
+    t = foxess_service.parse_foxess_timestamp("2026-04-29 13:00:00 BST+0100")
+    assert t.astimezone(timezone.utc) == datetime(
+        2026, 4, 29, 12, 0, 0, tzinfo=timezone.utc
+    )
+
+
+def test_parse_foxess_timestamp_default_offset_when_no_suffix() -> None:
+    t = foxess_service.parse_foxess_timestamp(
+        "2026-04-29 13:00:00", default_offset_h=1.0
+    )
+    assert t.astimezone(timezone.utc) == datetime(
+        2026, 4, 29, 12, 0, 0, tzinfo=timezone.utc
+    )
+
+
+def test_resample_kw_to_w_with_local_offset_suffix() -> None:
+    """BST+0100 wall times must bucket to the same local HH:MM labels (no +1 h bug)."""
+    day = date(2026, 4, 29)
+    tz_h = 1.0
+    blocks = [
+        {
+            "deviceSN": "SN1",
+            "datas": [
+                {
+                    "variable": "pvPower",
+                    "data": [
+                        {"time": "2026-04-29 13:05:00 BST+0100", "value": 2.0},
+                    ],
+                }
+            ],
+        }
+    ]
+    raw = foxess_service.extract_pv_power_series(blocks, default_offset_h=tz_h)
+    out = foxess_service.resample_to_power_watts(
+        raw, day, tz_h, 5, power_unit="kW"
+    )
+    idx = (13 * 60 + 5) // 5
+    assert out[idx] == pytest.approx(2000.0)
+
+
 def test_extract_pv_power_series() -> None:
     blocks = [
         {

@@ -46,9 +46,13 @@
         <span>DC efficiency (0–1)</span>
         <input type="number" formControlName="panel_efficiency" step="0.001" min="0.0001" max="1" />
       </label>
-      <label>
-        <span>Timezone offset (h from UTC)</span>
+      <label class="tz-field">
+        <span>Timezone offset (UTC+h; e.g. UK 0 = GMT, +1 = BST — update at DST)</span>
         <input type="number" formControlName="timezone_offset_h" step="0.5" min="-12" max="12" />
+        <small class="tz-hint">
+          Detected from browser: UTC{{ browserUtcOffsetH >= 0 ? '+' : '' }}{{ browserUtcOffsetH }}
+          <button type="button" class="linkish" (click)="useDetectedTimezone()">Use detected</button>
+        </small>
       </label>
       <label>
         <span>Sample step (min)</span>

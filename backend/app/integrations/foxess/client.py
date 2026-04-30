@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import os
-import ssl
 import time
 from typing import Any
 
 import httpx
+
+from app.integrations.http_verify import build_default_verify
 
 # FoxESS Open API request domain (per official docs).
 # Override via env var FOXESS_DOMAIN if FoxESS ever points you at a regional host.
@@ -86,7 +87,7 @@ class FoxessClient:
         url = f"{get_domain()}{path}"
         timeout = httpx.Timeout(25.0)
         try:
-            with httpx.Client(timeout=timeout, verify=_build_verify()) as client:
+            with httpx.Client(timeout=timeout, verify=build_default_verify()) as client:
                 r = client.post(url, json=body, headers=self._headers(path))
         except httpx.ConnectError as e:
             msg = str(e)

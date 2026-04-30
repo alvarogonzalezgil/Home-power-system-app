@@ -66,6 +66,8 @@ python -m pytest
 
 `app/data/system_config.json` is the persisted system profile (read/write via `GET/PUT /api/system/config`). Override file path: `HOME_POWER_CONFIG_PATH`.
 
+`timezone_offset_h` is a fixed **UTC+offset in hours** (e.g. `0` in UK winter GMT, `+1` in UK summer BST). It does not auto-switch at DST—update it in the app Settings (or in this file) when clocks change.
+
 Optional fields:
 
 - `inverter_sn` — FoxESS inverter serial; omit or leave empty to auto-detect the first `hasPV` device on first FoxESS call (cached back into this file).

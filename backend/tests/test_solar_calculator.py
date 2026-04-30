@@ -9,11 +9,52 @@ from app.services.solar_calculator import (
     REFERENCE_YEAR,
     day_curve,
     dni_clearsky_kwm2,
+    equation_of_time_minutes,
     kasten_young_air_mass,
     validate_ymd,
     compute_power_w_at_instant,
     iter_sample_times,
 )
+
+
+def test_solar_noon_clock_matches_tc_sign_pveducation() -> None:
+    """
+    Regression: time correction must be TC = 4*(lon - LSTM) + EoT (PVEducation).
+
+    At Greenwich (lon=0) lon-LSTM is zero, so this uses Oxfordshire-like lon with
+    tz=0 (hypothetical GMT) where the wrong sign shifts peak solar elevation by
+    ~10 min -- fails if LSTM-lon is used instead.
+    """
+    lat, lon, tz = 51.64, -1.31, 0.0
+    d = date(REFERENCE_YEAR, 3, 22)
+    doy = d.timetuple().tm_yday
+    eot = equation_of_time_minutes(doy)
+    lsm_deg = 15.0 * tz
+    # Clock time (decimal hours) when LST = 12 (hour angle 0, solar noon).
+    expected_lt_h = 12.0 - (eot + 4.0 * (lon - lsm_deg)) / 60.0
+    expected_min_from_midnight = expected_lt_h * 60.0
+
+    series = day_curve(
+        REFERENCE_YEAR,
+        d.month,
+        d.day,
+        latitude=lat,
+        longitude=lon,
+        timezone_offset_h=tz,
+        tilt_deg=40,
+        azimuth_deg=225,
+        panel_count=16,
+        panel_width_m=1.722,
+        panel_height_m=1.134,
+        panel_efficiency=0.207,
+        sample_minutes=5,
+    )
+    # Maximum elevation marks solar noon on the sampled grid.
+    dt_peak, _, st_peak = max(series, key=lambda t: t[2].elevation_deg)
+    actual_min = dt_peak.hour * 60 + dt_peak.minute + dt_peak.second / 60.0
+
+    assert abs(actual_min - expected_min_from_midnight) <= 12.0
+    assert st_peak.hour_angle_deg == pytest.approx(0.0, abs=2.5)
 
 
 def test_midnight_june21_power_zero() -> None:

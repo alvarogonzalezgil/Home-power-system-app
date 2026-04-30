@@ -1,4 +1,4 @@
-.pv {
+.forecast {
   h1 {
     margin: 0 0 0.5rem;
     font-size: 1.4rem;
@@ -32,6 +32,10 @@
       padding: 0.4rem 0.5rem;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
+    }
+
+    .model-toggle select {
+      min-width: 14rem;
     }
 
     .date-stepper-label {
@@ -77,16 +81,6 @@
   .error {
     color: #b91c1c;
     margin: 0 0 0.5rem;
-  }
-
-  .banner {
-    background: #fef3c7;
-    border: 1px solid #fcd34d;
-    color: #92400e;
-    padding: 0.65rem 0.85rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    margin: 0 0 1rem;
   }
 
   .chart-wrap {

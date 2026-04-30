@@ -1,5 +1,5 @@
 """
-FastAPI application: CORS for Angular dev server; PV, FoxESS, and system routes.
+FastAPI application: CORS for Angular dev server; PV, forecast, FoxESS, and system routes.
 """
 
 from __future__ import annotations
@@ -21,12 +21,12 @@ for _env_path in _env_paths:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import foxess, pv, system
+from app.api import forecast, foxess, pv, system
 
 app = FastAPI(
     title="Home Power System",
-    version="0.2.0",
-    description="Clear-sky PV, FoxESS measured PV, and system config API.",
+    version="0.3.0",
+    description="Clear-sky PV, weather forecast PV, FoxESS measured PV, and system config API.",
 )
 
 app.add_middleware(
@@ -45,6 +45,7 @@ app.add_middleware(
 )
 
 app.include_router(pv.router)
+app.include_router(forecast.router)
 app.include_router(system.router)
 app.include_router(foxess.router)
 

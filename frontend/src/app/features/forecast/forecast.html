@@ -1,41 +1,55 @@
-<section class="pv">
-  <h1>Theoretical vs actual PV</h1>
+<section class="forecast">
+  <h1>PV forecast (weather)</h1>
   <p class="sub" *ngIf="metLabel()">{{ metLabel() }}</p>
 
   <div class="controls">
     <div class="date-stepper">
       <label class="date-stepper-label">
-        <span>Date</span>
+        <span>Date (today … +6 days)</span>
         <span class="date-stepper-row">
           <button
             type="button"
             class="step-btn"
             (click)="shiftDay(-1)"
-            [disabled]="loading()"
+            [disabled]="!canPrev()"
             aria-label="Previous day">
             ←
           </button>
           <input
             type="date"
+            [min]="minIso()"
+            [max]="maxIso()"
             [ngModel]="dateIso()"
             (ngModelChange)="onDateIso($event)"
-            aria-label="Calendar date" />
+            aria-label="Forecast date" />
           <button
             type="button"
             class="step-btn"
             (click)="shiftDay(1)"
-            [disabled]="loading()"
+            [disabled]="!canNext()"
             aria-label="Next day">
             →
           </button>
         </span>
       </label>
     </div>
+
+    <label class="model-toggle">
+      <span>Model</span>
+      <select
+        [ngModel]="model()"
+        (ngModelChange)="onModel($event)"
+        [disabled]="loading()"
+        aria-label="Forecast model">
+        <option value="components">Components (POA + temperature)</option>
+        <option value="cloud_derate">Cloud derate (clear-sky × clouds)</option>
+      </select>
+    </label>
+
     <span *ngIf="loading()" class="status">Loading…</span>
   </div>
 
   <p *ngIf="error()" class="error">{{ error() }}</p>
-  <p *ngIf="foxessBanner()" class="banner">{{ foxessBanner() }}</p>
 
   <div class="chart-wrap" *ngIf="graphData().length">
     <plotly-plot

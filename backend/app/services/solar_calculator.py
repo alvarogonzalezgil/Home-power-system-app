@@ -58,9 +58,14 @@ def equation_of_time_minutes(day_of_year: int) -> float:
 def local_solar_time_hours(
     local_time_h: float, lon_deg: float, tz_h: float, eot_min: float
 ) -> float:
-    """Local solar time (decimal hours) — PVEducation 'Solar Time'."""
+    """
+    Local solar time (decimal hours) — PVEducation 'Solar Time'.
+
+    Time correction TC = 4*(longitude − LSTM) + EoT (minutes); west of LSTM
+    (longitude < LSTM) gives TC negative → LST earlier than clock time.
+    """
     lsm_deg = 15.0 * tz_h
-    return local_time_h + (eot_min + 4.0 * (lsm_deg - lon_deg)) / 60.0
+    return local_time_h + (eot_min + 4.0 * (lon_deg - lsm_deg)) / 60.0
 
 
 def hour_angle_deg(lst_h: float) -> float:

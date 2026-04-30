@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
+
+# Trailing zone suffix on FoxESS history times, e.g. ' BST+0100', ' CST+0800', ' +0100'.
+_FOXESS_TZ_SUFFIX_RE = re.compile(
+    r"\s*[A-Za-z]{0,5}\s*([+-])(\d{2}):?(\d{2})\s*$"
+)
 
 from app.integrations.foxess.client import FoxessApiError, FoxessClient
 from app.models.schemas import SystemConfig
@@ -21,22 +27,48 @@ def civil_day_bounds_utc_ms(day: date, timezone_offset_h: float) -> tuple[int, i
     return int(start_utc.timestamp() * 1000), int(end_utc.timestamp() * 1000)
 
 
-def parse_foxess_timestamp(s: str | Any) -> datetime:
-    """FoxESS returns UTC wall times as strings; normalize to aware UTC."""
-    raw = str(s).strip()
+def parse_foxess_timestamp(
+    s: str | Any,
+    default_offset_h: float | None = None,
+) -> datetime:
+    """
+    Parse a FoxESS history ``time`` string.
+
+    FoxESS often returns plant-local wall time with a trailing offset suffix,
+    e.g. ``2026-04-29 13:00:00 BST+0100`` or ``2025-11-25 17:58:16 CST+0800``.
+    Some payloads use ``YYYY-MM-DDTHH:MM:SSZ`` (UTC). If no suffix is present,
+    ``default_offset_h`` is applied as the zone offset (hours east of UTC); if
+    that is also ``None``, UTC is assumed (backward compatible).
+    """
+    raw = str(s).strip().replace("T", " ")
     if raw.endswith("Z"):
-        raw = raw[:-1]
-        naive = datetime.strptime(raw[:19], "%Y-%m-%dT%H:%M:%S")
+        wall = raw[:-1].rstrip()[:19]
+        naive = datetime.strptime(wall, "%Y-%m-%d %H:%M:%S")
         return naive.replace(tzinfo=timezone.utc)
-    raw = raw.replace("T", " ")
-    if len(raw) >= 19:
-        naive = datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S")
-        return naive.replace(tzinfo=timezone.utc)
-    raise ValueError(f"Unrecognized FoxESS time: {s!r}")
+
+    m = _FOXESS_TZ_SUFFIX_RE.search(raw)
+    if m:
+        sign, hh_s, mm_s = m.group(1), m.group(2), m.group(3)
+        hh, mm = int(hh_s), int(mm_s)
+        delta = timedelta(hours=hh, minutes=mm)
+        tzinfo = timezone(delta if sign == "+" else -delta)
+        wall = raw[: m.start()].rstrip()[:19]
+    elif default_offset_h is not None:
+        tzinfo = timezone(timedelta(hours=default_offset_h))
+        wall = raw[:19]
+    else:
+        tzinfo = timezone.utc
+        wall = raw[:19]
+
+    naive = datetime.strptime(wall, "%Y-%m-%d %H:%M:%S")
+    return naive.replace(tzinfo=tzinfo)
 
 
-def extract_pv_power_series(history_blocks: list[dict[str, Any]]) -> list[tuple[datetime, float]]:
-    """Collect (utc_datetime, value) for variable pvPower from history/query result."""
+def extract_pv_power_series(
+    history_blocks: list[dict[str, Any]],
+    default_offset_h: float | None = None,
+) -> list[tuple[datetime, float]]:
+    """Collect (aware datetime instant, value) for pvPower from history/query."""
     points: list[tuple[datetime, float]] = []
     for block in history_blocks:
         for ds in block.get("datas") or []:
@@ -45,7 +77,7 @@ def extract_pv_power_series(history_blocks: list[dict[str, Any]]) -> list[tuple[
             for pt in ds.get("data") or []:
                 if pt is None:
                     continue
-                t = parse_foxess_timestamp(pt["time"])
+                t = parse_foxess_timestamp(pt["time"], default_offset_h)
                 v = float(pt["value"])
                 points.append((t, v))
     points.sort(key=lambda x: x[0])
@@ -119,7 +151,7 @@ def get_actual_pv_curve_points(
         begin_ms,
         end_ms,
     )
-    raw_series = extract_pv_power_series(blocks)
+    raw_series = extract_pv_power_series(blocks, cfg.timezone_offset_h)
     watts_per_slot = resample_to_power_watts(
         raw_series,
         day,

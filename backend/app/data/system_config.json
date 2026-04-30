@@ -1,13 +1,13 @@
 {
   "latitude": 51.6420585176877,
   "longitude": -1.308588028993981,
-  "tilt_deg": 40.0,
+  "tilt_deg": 45.0,
   "azimuth_deg": 225.0,
   "panel_count": 16,
   "panel_width_m": 1.722,
   "panel_height_m": 1.134,
   "panel_efficiency": 0.207,
-  "timezone_offset_h": -1.0,
+  "timezone_offset_h": 1.0,
   "sample_minutes": 5,
   "inverter_sn": "65BH502024FB045",
   "foxess_power_unit": "kW"

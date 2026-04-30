@@ -21,7 +21,12 @@ class SystemConfig(BaseModel):
     panel_height_m: float = Field(gt=0)
     panel_efficiency: float = Field(gt=0, le=1)
     timezone_offset_h: float = Field(
-        ge=-12, le=12, description="UTC + offset (e.g. 0 for winter UK if times are UTC)"
+        ge=-12,
+        le=12,
+        description=(
+            "UTC + offset in hours (e.g. 0 for GMT, +1 for BST). "
+            "Update manually at DST transitions (or via Settings)."
+        ),
     )
     sample_minutes: int = Field(default=5, ge=1, le=60)
     inverter_sn: str | None = Field(
@@ -45,3 +50,12 @@ class PvCurvePoint(BaseModel):
 class PvCurveResponse(BaseModel):
     date: str
     points: list[PvCurvePoint]
+
+
+class ForecastPvDayResponse(BaseModel):
+    """Weather forecast curve plus clear-sky reference for the same sample grid."""
+
+    date: str
+    model: Literal["components", "cloud_derate"]
+    forecast_points: list[PvCurvePoint]
+    clear_sky_points: list[PvCurvePoint]

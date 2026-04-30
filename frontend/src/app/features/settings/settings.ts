@@ -17,6 +17,9 @@ export class Settings implements OnInit {
   private readonly system = inject(SystemService);
   private readonly router = inject(Router);
 
+  /** Browser local offset from UTC in hours (same convention as `timezone_offset_h`). */
+  readonly browserUtcOffsetH = -new Date().getTimezoneOffset() / 60;
+
   readonly saving = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly saveMessage = signal<string | null>(null);
@@ -30,7 +33,10 @@ export class Settings implements OnInit {
     panel_width_m: [0, [Validators.required, Validators.min(0.01)]],
     panel_height_m: [0, [Validators.required, Validators.min(0.01)]],
     panel_efficiency: [0, [Validators.required, Validators.min(0.0001), Validators.max(1)]],
-    timezone_offset_h: [0, [Validators.min(-12), Validators.max(12)]],
+    timezone_offset_h: [
+      this.browserUtcOffsetH,
+      [Validators.min(-12), Validators.max(12)],
+    ],
     sample_minutes: [5, [Validators.required, Validators.min(1), Validators.max(60)]],
     inverter_sn: [''],
     foxess_power_unit: ['kW' as 'kW' | 'W'],
@@ -50,6 +56,10 @@ export class Settings implements OnInit {
         this.loadError.set(this.httpErr(e, 'Failed to load settings'));
       },
     });
+  }
+
+  useDetectedTimezone(): void {
+    this.form.patchValue({ timezone_offset_h: this.browserUtcOffsetH });
   }
 
   submit(): void {
