@@ -223,6 +223,7 @@ def iter_sample_times(
 
 
 def day_curve(
+    year: int,
     month: int,
     day: int,
     latitude: float,
@@ -236,8 +237,8 @@ def day_curve(
     panel_efficiency: float,
     sample_minutes: int,
 ) -> list[tuple[datetime, float, SolarState]]:
-    """Sequence of (timestamp, power_w, state) for the reference-year date."""
-    d = date(REFERENCE_YEAR, month, day)
+    """Sequence of (timestamp, power_w, state) for the given calendar date."""
+    d = date(year, month, day)
     area = panel_count * panel_width_m * panel_height_m
     out: list[tuple[datetime, float, SolarState]] = []
     for dt in iter_sample_times(d, sample_minutes):
@@ -256,7 +257,6 @@ def day_curve(
     return out
 
 
-def validate_md(month: int, day: int) -> None:
-    if month == 2 and day == 29:
-        raise ValueError("Day 29 of February is not valid (use non-leap year).")
-    date(REFERENCE_YEAR, month, day)  # invalid calendar date -> ValueError
+def validate_ymd(year: int, month: int, day: int) -> None:
+    """Valid calendar date for year (supports Feb 29 on leap years)."""
+    date(year, month, day)

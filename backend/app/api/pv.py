@@ -6,23 +6,25 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.models.schemas import PvCurvePoint, PvCurveResponse
 from app.services import config_store
-from app.services.solar_calculator import day_curve, validate_md
+from app.services.solar_calculator import day_curve, validate_ymd
 
 router = APIRouter(prefix="/api/pv", tags=["pv"])
 
 
 @router.get("/day", response_model=PvCurveResponse)
 def get_day(
+    year: int = Query(2025, ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
     day: int = Query(..., ge=1, le=31),
 ) -> PvCurveResponse:
     try:
-        validate_md(month, day)
+        validate_ymd(year, month, day)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     cfg = config_store.load_config()
     try:
         series = day_curve(
+            year=year,
             month=month,
             day=day,
             latitude=cfg.latitude,
@@ -46,6 +48,6 @@ def get_day(
         for dt, p, _ in series
     ]
     return PvCurveResponse(
-        date=f"{month:02d}-{day:02d}",
+        date=f"{year:04d}-{month:02d}-{day:02d}",
         points=points,
     )

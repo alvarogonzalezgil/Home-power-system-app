@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class SystemConfig(BaseModel):
@@ -22,11 +24,22 @@ class SystemConfig(BaseModel):
         ge=-12, le=12, description="UTC + offset (e.g. 0 for winter UK if times are UTC)"
     )
     sample_minutes: int = Field(default=5, ge=1, le=60)
+    inverter_sn: str | None = Field(
+        default=None,
+        description="FoxESS inverter serial; empty or absent triggers auto-detect",
+    )
+    foxess_power_unit: Literal["kW", "W"] = Field(
+        default="kW",
+        description="Unit of pvPower from FoxESS history API",
+    )
 
 
 class PvCurvePoint(BaseModel):
     time: str
-    power_w: float
+    power_w: float | None = Field(
+        default=None,
+        description="Power in watts; null when no sample in interval",
+    )
 
 
 class PvCurveResponse(BaseModel):

@@ -1,3 +1,6 @@
+# Secrets (copy from backend/.env.example)
+backend/.env
+
 # Python
 backend/.venv/
 __pycache__/

@@ -1,6 +1,8 @@
 <section class="settings">
   <h1>System settings</h1>
-  <p class="sub">Values are stored in the backend and used for the clear-sky PV model.</p>
+  <p class="sub">
+    Clear-sky PV model parameters and optional FoxESS inverter serial (auto-detected if left blank).
+  </p>
 
   <p *ngIf="loadError()" class="error">{{ loadError() }}</p>
 
@@ -51,6 +53,22 @@
       <label>
         <span>Sample step (min)</span>
         <input type="number" formControlName="sample_minutes" min="1" max="60" />
+      </label>
+    </div>
+
+    <div class="row full">
+      <label>
+        <span>FoxESS inverter serial number (optional)</span>
+        <input type="text" formControlName="inverter_sn" placeholder="Auto-detect on first use" />
+      </label>
+    </div>
+    <div class="row">
+      <label>
+        <span>FoxESS pvPower unit</span>
+        <select formControlName="foxess_power_unit">
+          <option value="kW">kW (default)</option>
+          <option value="W">W</option>
+        </select>
       </label>
     </div>
 

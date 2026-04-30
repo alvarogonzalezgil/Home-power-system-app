@@ -32,12 +32,18 @@ export class Settings implements OnInit {
     panel_efficiency: [0, [Validators.required, Validators.min(0.0001), Validators.max(1)]],
     timezone_offset_h: [0, [Validators.min(-12), Validators.max(12)]],
     sample_minutes: [5, [Validators.required, Validators.min(1), Validators.max(60)]],
+    inverter_sn: [''],
+    foxess_power_unit: ['kW' as 'kW' | 'W'],
   });
 
   ngOnInit(): void {
     this.system.getConfig().subscribe({
       next: (c) => {
-        this.form.patchValue(c);
+        this.form.patchValue({
+          ...c,
+          inverter_sn: c.inverter_sn ?? '',
+          foxess_power_unit: c.foxess_power_unit ?? 'kW',
+        });
         this.loadError.set(null);
       },
       error: (e) => {
@@ -52,9 +58,14 @@ export class Settings implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    const raw = this.form.getRawValue() as SystemConfig;
+    const raw = this.form.getRawValue();
+    const payload = {
+      ...raw,
+      inverter_sn: raw.inverter_sn?.trim() ? raw.inverter_sn.trim() : null,
+      foxess_power_unit: (raw.foxess_power_unit ?? 'kW') as 'kW' | 'W',
+    } as SystemConfig;
     this.saving.set(true);
-    this.system.putConfig(raw).subscribe({
+    this.system.putConfig(payload).subscribe({
       next: () => {
         this.saving.set(false);
         this.saveMessage.set('Saved. Returning to dashboard…');

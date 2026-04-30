@@ -5,15 +5,14 @@ import { environment } from '../../../environments/environment';
 import { PvCurveResponse } from '../models/pv-curve.model';
 
 @Injectable({ providedIn: 'root' })
-export class PvService {
+export class FoxessService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBase;
 
-  getDay(year: number, month: number, day: number): Observable<PvCurveResponse> {
-    const params = new HttpParams()
-      .set('year', String(year))
-      .set('month', String(month))
-      .set('day', String(day));
-    return this.http.get<PvCurveResponse>(`${this.base}/api/pv/day`, { params });
+  getDay(dateIso: string): Observable<PvCurveResponse> {
+    const params = new HttpParams().set('date', dateIso);
+    return this.http.get<PvCurveResponse>(`${this.base}/api/foxess/pv/day`, {
+      params,
+    });
   }
 }

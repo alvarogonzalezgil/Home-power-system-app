@@ -9,4 +9,6 @@ export interface SystemConfig {
   panel_efficiency: number;
   timezone_offset_h: number;
   sample_minutes: number;
+  inverter_sn?: string | null;
+  foxess_power_unit?: 'kW' | 'W';
 }

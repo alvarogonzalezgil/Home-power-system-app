@@ -1,16 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PlotlyModule } from 'angular-plotly.js';
 import { PvService } from '../../core/api/pv.service';
+import { FoxessService } from '../../core/api/foxess.service';
 import { PvCurveResponse } from '../../core/models/pv-curve.model';
 
-const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
-function daysInMonth(m: number): number {
-  const t = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return t[m - 1];
+function todayIsoLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 @Component({
@@ -21,78 +23,68 @@ function daysInMonth(m: number): number {
 })
 export class PvDashboard implements OnInit {
   private readonly pv = inject(PvService);
+  private readonly foxess = inject(FoxessService);
 
-  readonly month = signal(7);
-  readonly day = signal(1);
+  /** YYYY-MM-DD */
+  readonly dateIso = signal(todayIsoLocal());
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly foxessBanner = signal<string | null>(null);
   readonly metLabel = signal<string | null>(null);
 
-  /** Plotly data traces */
   readonly graphData = signal<unknown[]>([]);
   readonly graphLayout = signal<Record<string, unknown>>({});
-  readonly monthOptions = MONTHS;
-
-  readonly maxDay = computed(() => daysInMonth(this.month()));
 
   ngOnInit(): void {
     this.load();
   }
 
-  onMonth(m: string | number): void {
-    const n = Number(m);
-    this.month.set(n);
-    this.clampDay();
-    this.load();
-  }
-
-  onDay(d: string | number): void {
-    const n = Math.floor(Number(d));
-    if (Number.isNaN(n) || n < 1) {
+  onDateIso(value: string): void {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       return;
     }
-    this.day.set(Math.min(n, this.maxDay()));
+    this.dateIso.set(value);
     this.load();
-  }
-
-  private clampDay(): void {
-    const max = this.maxDay();
-    if (this.day() > max) {
-      this.day.set(max);
-    }
   }
 
   private load(): void {
+    const iso = this.dateIso();
+    const parts = iso.split('-').map(Number);
+    const year = parts[0]!;
+    const month = parts[1]!;
+    const day = parts[2]!;
+
     this.loading.set(true);
     this.error.set(null);
-    this.pv.getDay(this.month(), this.day()).subscribe({
-      next: (res: PvCurveResponse) => {
-        this.loading.set(false);
-        this.metLabel.set(
-          `Clear-sky model — ${res.date} (day-of-year from 2025 reference)`,
-        );
-        const x = res.points.map((p) => p.time);
-        const y = res.points.map((p) => p.power_w);
-        this.graphData.set([
-          {
-            x,
-            y,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'PV (W)',
-            line: { color: '#0ea5e9', width: 2 },
+    this.foxessBanner.set(null);
+
+    this.pv.getDay(year, month, day).subscribe({
+      next: (theoretical: PvCurveResponse) => {
+        this.foxess.getDay(iso).subscribe({
+          next: (actual: PvCurveResponse) => {
+            this.loading.set(false);
+            this.metLabel.set(
+              `${theoretical.date} — clear-sky theoretical vs FoxESS measured pvPower`,
+            );
+            this.applyChart(theoretical, actual);
           },
-        ]);
-        this.graphLayout.set({
-          title: { text: 'Theoretical max PV power (clear sky)' },
-          xaxis: { title: { text: 'Time (HH:MM)' } },
-          yaxis: { title: { text: 'Power (W)' } },
-          margin: { l: 60, r: 20, t: 50, b: 50 },
-          autosize: true,
+          error: (e: unknown) => {
+            this.loading.set(false);
+            const msg = this.detailFromHttp(e);
+            this.foxessBanner.set(
+              `Actual (FoxESS) unavailable — ${msg}. Showing theoretical curve only.`,
+            );
+            this.metLabel.set(
+              `${theoretical.date} — theoretical only (FoxESS failed)`,
+            );
+            this.applyChart(theoretical, null);
+          },
         });
       },
       error: (e: unknown) => {
         this.loading.set(false);
+        this.graphData.set([]);
+        this.graphLayout.set({});
         if (e instanceof HttpErrorResponse) {
           const d = e.error;
           const msg =
@@ -103,9 +95,58 @@ export class PvDashboard implements OnInit {
         } else {
           this.error.set(String(e));
         }
-        this.graphData.set([]);
-        this.graphLayout.set({});
       },
+    });
+  }
+
+  private detailFromHttp(e: unknown): string {
+    if (e instanceof HttpErrorResponse) {
+      if (e.status === 0) {
+        return 'could not reach API (status 0 — restart `ng serve` after updating env; ensure backend is on 8010)';
+      }
+      const d = e.error;
+      if (d && typeof d === 'object' && 'detail' in d) {
+        return String((d as { detail: string }).detail);
+      }
+      return e.message;
+    }
+    return String(e);
+  }
+
+  private applyChart(
+    theoretical: PvCurveResponse,
+    actual: PvCurveResponse | null,
+  ): void {
+    const x = theoretical.points.map((p) => p.time);
+    const traces: unknown[] = [
+      {
+        x,
+        y: theoretical.points.map((p) => p.power_w ?? 0),
+        name: 'Theoretical max (clear sky)',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#0ea5e9', width: 2, dash: 'dash' },
+      },
+    ];
+    if (actual) {
+      traces.push({
+        x,
+        y: actual.points.map((p) => p.power_w),
+        name: 'Actual (FoxESS)',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#15803d', width: 2 },
+        connectgaps: false,
+      });
+    }
+    this.graphData.set(traces);
+    this.graphLayout.set({
+      title: { text: 'PV power: theoretical vs FoxESS actual' },
+      xaxis: { title: { text: 'Time (HH:MM)' } },
+      yaxis: { title: { text: 'Power (W)' } },
+      margin: { l: 60, r: 20, t: 50, b: 50 },
+      autosize: true,
+      legend: { orientation: 'h', y: -0.15 },
     });
   }
 }

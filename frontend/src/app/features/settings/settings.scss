@@ -28,6 +28,10 @@
     margin-bottom: 1rem;
   }
 
+  .row.full {
+    grid-template-columns: 1fr;
+  }
+
   label {
     display: flex;
     flex-direction: column;
@@ -35,7 +39,8 @@
     font-size: 0.8rem;
     color: #334155;
 
-    input {
+    input,
+    select {
       padding: 0.45rem 0.5rem;
       border: 1px solid #cbd5e1;
       border-radius: 6px;

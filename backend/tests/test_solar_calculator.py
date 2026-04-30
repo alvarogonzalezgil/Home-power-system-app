@@ -10,7 +10,7 @@ from app.services.solar_calculator import (
     day_curve,
     dni_clearsky_kwm2,
     kasten_young_air_mass,
-    validate_md,
+    validate_ymd,
     compute_power_w_at_instant,
     iter_sample_times,
 )
@@ -39,7 +39,7 @@ def test_midnight_june21_power_zero() -> None:
 def test_solar_noon_summer_power_positive() -> None:
     """At solar peak near noon in summer, clear-sky power is positive (UK)."""
     series = day_curve(
-        6, 21,
+        REFERENCE_YEAR, 6, 21,
         latitude=51.64, longitude=-1.31, timezone_offset_h=0.0,
         tilt_deg=40, azimuth_deg=225, panel_count=16,
         panel_width_m=1.722, panel_height_m=1.134, panel_efficiency=0.207,
@@ -56,7 +56,7 @@ def test_sunrise_ramp_monotone_morning() -> None:
     be non-decreasing (clear sky, no clouds).
     """
     series = day_curve(
-        3, 21,  # vernal equinox: symmetric sun path
+        REFERENCE_YEAR, 3, 21,  # vernal equinox: symmetric sun path
         latitude=51.64, longitude=-1.31, timezone_offset_h=0.0,
         tilt_deg=40, azimuth_deg=225, panel_count=16,
         panel_width_m=1.722, panel_height_m=1.134, panel_efficiency=0.207,
@@ -75,19 +75,24 @@ def test_sunrise_ramp_monotone_morning() -> None:
 
 def test_spring_fall_symmetry_around_solar_noon() -> None:
     """Vernal and autumnal equinox same declination: peak power and shape roughly comparable."""
-    s1 = day_curve(3, 20, 51.64, -1.31, 0, 40, 225, 16, 1.722, 1.134, 0.207, 5)
-    s2 = day_curve(9, 22, 51.64, -1.31, 0, 40, 225, 16, 1.722, 1.134, 0.207, 5)
+    s1 = day_curve(
+        REFERENCE_YEAR, 3, 20, 51.64, -1.31, 0, 40, 225, 16, 1.722, 1.134, 0.207, 5
+    )
+    s2 = day_curve(
+        REFERENCE_YEAR, 9, 22, 51.64, -1.31, 0, 40, 225, 16, 1.722, 1.134, 0.207, 5
+    )
     m1 = max(p for _, p, _ in s1)
     m2 = max(p for _, p, _ in s2)
     assert m1 > 0 and m2 > 0
     assert 0.85 < m1 / m2 < 1.15  # not identical day length but same δ ≈ 0 (±1 day ok)
 
 
-def test_feb_29_rejected() -> None:
-    with pytest.raises(ValueError, match="February|29|invalid|Day"):
-        validate_md(2, 29)
+def test_feb_29_validation() -> None:
+    validate_ymd(2024, 2, 29)  # leap year — ok
     with pytest.raises(ValueError):
-        validate_md(2, 30)  # invalid month-day
+        validate_ymd(2023, 2, 29)
+    with pytest.raises(ValueError):
+        validate_ymd(2023, 2, 30)
 
 
 def test_dni_kasten_zenith() -> None:

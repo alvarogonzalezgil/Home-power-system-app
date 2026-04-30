@@ -1,6 +1,6 @@
 export interface PvCurvePoint {
   time: string;
-  power_w: number;
+  power_w: number | null;
 }
 
 export interface PvCurveResponse {
