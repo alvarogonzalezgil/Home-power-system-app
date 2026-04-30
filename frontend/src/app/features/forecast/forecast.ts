@@ -7,6 +7,7 @@ import { ForecastService } from '../../core/api/forecast.service';
 import {
   ForecastPvDayResponse,
   ForecastPvModel,
+  PvCurvePoint,
 } from '../../core/models/pv-curve.model';
 
 function todayIsoLocal(): string {
@@ -142,6 +143,27 @@ export class Forecast implements OnInit {
         line: { color: '#0ea5e9', width: 2, dash: 'dash' },
       },
     ];
+    const peak = this.peakPoint(res.clear_sky_points);
+    if (peak) {
+      traces.push({
+        x: [peak.time],
+        y: [peak.power_w],
+        name: 'Theoretical peak',
+        type: 'scatter',
+        mode: 'markers+text',
+        text: [`${peak.time} — ${(peak.power_w / 1000).toFixed(2)} kW`],
+        textposition: 'top center',
+        marker: {
+          size: 11,
+          color: '#dc2626',
+          symbol: 'star',
+          line: { color: '#7f1d1d', width: 1 },
+        },
+        hovertemplate:
+          '%{x}<br>%{y:.0f} W<extra>Theoretical peak</extra>',
+        showlegend: true,
+      });
+    }
     this.graphData.set(traces);
     this.graphLayout.set({
       title: { text: 'PV power forecast vs clear sky' },
@@ -151,5 +173,19 @@ export class Forecast implements OnInit {
       autosize: true,
       legend: { orientation: 'h', y: -0.15 },
     });
+  }
+
+  private peakPoint(points: PvCurvePoint[]): { time: string; power_w: number } | null {
+    let best: { time: string; power_w: number } | null = null;
+    for (const p of points) {
+      const v = p.power_w;
+      if (v == null) {
+        continue;
+      }
+      if (!best || v > best.power_w) {
+        best = { time: p.time, power_w: v };
+      }
+    }
+    return best;
   }
 }

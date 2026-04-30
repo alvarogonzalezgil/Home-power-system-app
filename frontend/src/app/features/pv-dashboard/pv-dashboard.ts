@@ -5,7 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { PlotlyModule } from 'angular-plotly.js';
 import { PvService } from '../../core/api/pv.service';
 import { FoxessService } from '../../core/api/foxess.service';
-import { PvCurveResponse } from '../../core/models/pv-curve.model';
+import {
+  PvCurvePoint,
+  PvCurveResponse,
+} from '../../core/models/pv-curve.model';
 
 function todayIsoLocal(): string {
   const d = new Date();
@@ -157,6 +160,27 @@ export class PvDashboard implements OnInit {
         connectgaps: false,
       });
     }
+    const peak = this.peakPoint(theoretical.points);
+    if (peak) {
+      traces.push({
+        x: [peak.time],
+        y: [peak.power_w],
+        name: 'Theoretical peak',
+        type: 'scatter',
+        mode: 'markers+text',
+        text: [`${peak.time} — ${(peak.power_w / 1000).toFixed(2)} kW`],
+        textposition: 'top center',
+        marker: {
+          size: 11,
+          color: '#dc2626',
+          symbol: 'star',
+          line: { color: '#7f1d1d', width: 1 },
+        },
+        hovertemplate:
+          '%{x}<br>%{y:.0f} W<extra>Theoretical peak</extra>',
+        showlegend: true,
+      });
+    }
     this.graphData.set(traces);
     this.graphLayout.set({
       title: { text: 'PV power: theoretical vs FoxESS actual' },
@@ -166,5 +190,19 @@ export class PvDashboard implements OnInit {
       autosize: true,
       legend: { orientation: 'h', y: -0.15 },
     });
+  }
+
+  private peakPoint(points: PvCurvePoint[]): { time: string; power_w: number } | null {
+    let best: { time: string; power_w: number } | null = null;
+    for (const p of points) {
+      const v = p.power_w;
+      if (v == null) {
+        continue;
+      }
+      if (!best || v > best.power_w) {
+        best = { time: p.time, power_w: v };
+      }
+    }
+    return best;
   }
 }
