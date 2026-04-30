@@ -4,6 +4,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PlotlyModule } from 'angular-plotly.js';
 import { ForecastService } from '../../core/api/forecast.service';
+import { formatKwh, integrateEnergyKwh } from '../../core/util/energy';
 import {
   ForecastPvDayResponse,
   ForecastPvModel,
@@ -49,6 +50,7 @@ export class Forecast implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly metLabel = signal<string | null>(null);
+  readonly dailyTotalsLabel = signal<string | null>(null);
 
   readonly graphData = signal<unknown[]>([]);
   readonly graphLayout = signal<Record<string, unknown>>({});
@@ -109,6 +111,7 @@ export class Forecast implements OnInit {
         this.loading.set(false);
         this.graphData.set([]);
         this.graphLayout.set({});
+        this.dailyTotalsLabel.set(null);
         if (e instanceof HttpErrorResponse) {
           const d = e.error;
           const msg =
@@ -173,6 +176,19 @@ export class Forecast implements OnInit {
       autosize: true,
       legend: { orientation: 'h', y: -0.15 },
     });
+
+    if (res.forecast_points.length >= 2) {
+      const fc = integrateEnergyKwh(res.forecast_points);
+      const cs = integrateEnergyKwh(res.clear_sky_points);
+      this.dailyTotalsLabel.set(
+        [
+          `Forecast: ${formatKwh(fc.kwh)}${fc.partial ? ' (partial)' : ''}`,
+          `Clear-sky: ${formatKwh(cs.kwh)}${cs.partial ? ' (partial)' : ''}`,
+        ].join('   ·   '),
+      );
+    } else {
+      this.dailyTotalsLabel.set(null);
+    }
   }
 
   private peakPoint(points: PvCurvePoint[]): { time: string; power_w: number } | null {

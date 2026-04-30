@@ -1,6 +1,7 @@
 <section class="pv">
   <h1>Theoretical vs actual PV</h1>
   <p class="sub" *ngIf="metLabel()">{{ metLabel() }}</p>
+  <p class="totals" *ngIf="dailyTotalsLabel()">{{ dailyTotalsLabel() }}</p>
 
   <div class="controls">
     <div class="date-stepper">

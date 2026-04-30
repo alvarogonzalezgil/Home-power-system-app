@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { PlotlyModule } from 'angular-plotly.js';
 import { PvService } from '../../core/api/pv.service';
 import { FoxessService } from '../../core/api/foxess.service';
+import { formatKwh, integrateEnergyKwh } from '../../core/util/energy';
 import {
   PvCurvePoint,
   PvCurveResponse,
@@ -47,6 +48,7 @@ export class PvDashboard implements OnInit {
   readonly error = signal<string | null>(null);
   readonly foxessBanner = signal<string | null>(null);
   readonly metLabel = signal<string | null>(null);
+  readonly dailyTotalsLabel = signal<string | null>(null);
 
   readonly graphData = signal<unknown[]>([]);
   readonly graphLayout = signal<Record<string, unknown>>({});
@@ -106,6 +108,7 @@ export class PvDashboard implements OnInit {
         this.loading.set(false);
         this.graphData.set([]);
         this.graphLayout.set({});
+        this.dailyTotalsLabel.set(null);
         if (e instanceof HttpErrorResponse) {
           const d = e.error;
           const msg =
@@ -190,6 +193,20 @@ export class PvDashboard implements OnInit {
       autosize: true,
       legend: { orientation: 'h', y: -0.15 },
     });
+
+    if (theoretical.points.length >= 2) {
+      const th = integrateEnergyKwh(theoretical.points);
+      const parts = [
+        `Theoretical: ${formatKwh(th.kwh)}${th.partial ? ' (partial)' : ''}`,
+      ];
+      if (actual) {
+        const ac = integrateEnergyKwh(actual.points);
+        parts.push(`Actual: ${formatKwh(ac.kwh)}${ac.partial ? ' (partial)' : ''}`);
+      }
+      this.dailyTotalsLabel.set(parts.join('   ·   '));
+    } else {
+      this.dailyTotalsLabel.set(null);
+    }
   }
 
   private peakPoint(points: PvCurvePoint[]): { time: string; power_w: number } | null {
