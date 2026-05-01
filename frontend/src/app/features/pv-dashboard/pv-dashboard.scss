@@ -16,6 +16,12 @@
     font-size: 0.95rem;
     margin: 0 0 1rem;
     font-weight: 500;
+
+    &.excess {
+      color: #475569;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
   }
 
   .controls {
@@ -39,6 +45,17 @@
       padding: 0.4rem 0.5rem;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
+    }
+
+    input[type='range'] {
+      min-width: 10rem;
+      padding: 0;
+      border: none;
+      accent-color: #64748b;
+    }
+
+    .threshold {
+      min-width: 12rem;
     }
 
     .date-stepper-label {

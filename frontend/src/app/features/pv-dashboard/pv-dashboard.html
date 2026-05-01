@@ -2,6 +2,7 @@
   <h1>Theoretical vs actual PV</h1>
   <p class="sub" *ngIf="metLabel()">{{ metLabel() }}</p>
   <p class="totals" *ngIf="dailyTotalsLabel()">{{ dailyTotalsLabel() }}</p>
+  <p class="totals excess" *ngIf="excessTotalsLabel()">{{ excessTotalsLabel() }}</p>
 
   <div class="controls">
     <div class="date-stepper">
@@ -32,6 +33,20 @@
         </span>
       </label>
     </div>
+
+    <label class="threshold">
+      <span>Inverter threshold: {{ thresholdKw().toFixed(1) }} kW</span>
+      <input
+        type="range"
+        min="0"
+        [max]="sliderMaxKw()"
+        step="0.1"
+        [ngModel]="thresholdKw()"
+        (ngModelChange)="onThreshold($event)"
+        [disabled]="loading()"
+        aria-label="Inverter power threshold (kW)" />
+    </label>
+
     <span *ngIf="loading()" class="status">Loading…</span>
   </div>
 

@@ -38,6 +38,50 @@ export function integrateEnergyKwh(points: PvCurvePoint[]): EnergyIntegralResult
   return { kwh, partial };
 }
 
+/**
+ * Integral of max(P - thresholdW, 0) over sample segments (clipping / excess energy), kWh.
+ */
+export function excessEnergyKwh(
+  points: PvCurvePoint[],
+  thresholdW: number,
+): EnergyIntegralResult {
+  let kwh = 0;
+  let partial = false;
+  for (let i = 0; i < points.length - 1; i++) {
+    const ptA = points[i]!;
+    const ptB = points[i + 1]!;
+    if (ptA.power_w == null || ptB.power_w == null) {
+      partial = true;
+      continue;
+    }
+    const dtH = (toMinutes(ptB.time) - toMinutes(ptA.time)) / 60;
+    if (dtH <= 0) {
+      partial = true;
+      continue;
+    }
+    const a = ptA.power_w - thresholdW;
+    const b = ptB.power_w - thresholdW;
+    let wh = 0;
+    if (a >= 0 && b >= 0) {
+      wh = ((a + b) / 2) * dtH;
+    } else if (a <= 0 && b <= 0) {
+      wh = 0;
+    } else if (a > 0 && b < 0) {
+      const denom = a - b;
+      if (denom !== 0) {
+        wh = ((a * a) / denom) * dtH * 0.5;
+      }
+    } else if (a < 0 && b > 0) {
+      const denom = b - a;
+      if (denom !== 0) {
+        wh = ((b * b) / denom) * dtH * 0.5;
+      }
+    }
+    kwh += wh / 1000;
+  }
+  return { kwh, partial };
+}
+
 export function formatKwh(kwh: number): string {
   return `${kwh.toFixed(2)} kWh`;
 }

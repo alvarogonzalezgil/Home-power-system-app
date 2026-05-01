@@ -6,7 +6,7 @@ import { PlotlyModule } from 'angular-plotly.js';
 import { PvService } from '../../core/api/pv.service';
 import { FoxessService } from '../../core/api/foxess.service';
 import { ForecastService } from '../../core/api/forecast.service';
-import { formatKwh, integrateEnergyKwh } from '../../core/util/energy';
+import { excessEnergyKwh, formatKwh, integrateEnergyKwh } from '../../core/util/energy';
 import {
   ForecastPvDayResponse,
   PvCurvePoint,
@@ -54,9 +54,20 @@ export class PvDashboard implements OnInit {
   readonly forecastBanner = signal<string | null>(null);
   readonly metLabel = signal<string | null>(null);
   readonly dailyTotalsLabel = signal<string | null>(null);
+  /** Power threshold for inverter clipping estimate (kW). */
+  readonly thresholdKw = signal(5);
+  /** Slider max kW; at least 5.5 so default 5 kW is always reachable. */
+  readonly sliderMaxKw = signal(10);
+  readonly excessTotalsLabel = signal<string | null>(null);
 
   readonly graphData = signal<unknown[]>([]);
   readonly graphLayout = signal<Record<string, unknown>>({});
+
+  /** Cached curve responses so threshold slider does not refetch. */
+  private theoreticalCache: PvCurveResponse | null = null;
+  private actualCache: PvCurveResponse | null = null;
+  private forecastCache: ForecastPvDayResponse | null = null;
+  private chartTitle = '';
 
   ngOnInit(): void {
     this.load();
@@ -73,6 +84,18 @@ export class PvDashboard implements OnInit {
   shiftDay(deltaDays: number): void {
     const next = shiftDateIso(this.dateIso(), deltaDays);
     this.onDateIso(next);
+  }
+
+  onThreshold(value: number | string): void {
+    const num = typeof value === 'string' ? Number.parseFloat(value) : value;
+    if (Number.isNaN(num)) {
+      return;
+    }
+    const capped = Math.min(Math.max(0, num), this.sliderMaxKw());
+    this.thresholdKw.set(capped);
+    if (this.chartTitle) {
+      this.applyThresholdView();
+    }
   }
 
   private load(): void {
@@ -153,6 +176,11 @@ export class PvDashboard implements OnInit {
         this.graphData.set([]);
         this.graphLayout.set({});
         this.dailyTotalsLabel.set(null);
+        this.excessTotalsLabel.set(null);
+        this.theoreticalCache = null;
+        this.actualCache = null;
+        this.forecastCache = null;
+        this.chartTitle = '';
         if (e instanceof HttpErrorResponse) {
           const d = e.error;
           const msg =
@@ -210,6 +238,23 @@ export class PvDashboard implements OnInit {
     actual: PvCurveResponse | null,
     forecast: ForecastPvDayResponse | null,
   ): void {
+    this.theoreticalCache = theoretical;
+    this.actualCache = actual;
+    this.forecastCache = forecast;
+
+    let maxW = this.maxPowerW(theoretical.points);
+    if (forecast) {
+      maxW = Math.max(maxW, this.maxPowerW(forecast.forecast_points));
+    }
+    if (actual) {
+      maxW = Math.max(maxW, this.maxPowerW(actual.points));
+    }
+    const maxPeakKw = maxW / 1000;
+    this.sliderMaxKw.set(Math.max(5.5, Math.ceil(maxPeakKw * 2) / 2));
+    if (this.thresholdKw() > this.sliderMaxKw()) {
+      this.thresholdKw.set(this.sliderMaxKw());
+    }
+
     const x = theoretical.points.map((p) => p.time);
     const traces: unknown[] = [
       {
@@ -275,14 +320,7 @@ export class PvDashboard implements OnInit {
           : actual
             ? 'PV power: theoretical vs FoxESS actual'
             : 'PV power: theoretical (clear sky)';
-    this.graphLayout.set({
-      title: { text: title },
-      xaxis: { title: { text: 'Time (HH:MM)' } },
-      yaxis: { title: { text: 'Power (W)' } },
-      margin: { l: 60, r: 20, t: 50, b: 50 },
-      autosize: true,
-      legend: { orientation: 'h', y: -0.15 },
-    });
+    this.applyThresholdView(title);
 
     if (theoretical.points.length >= 2) {
       const th = integrateEnergyKwh(theoretical.points);
@@ -301,6 +339,81 @@ export class PvDashboard implements OnInit {
     } else {
       this.dailyTotalsLabel.set(null);
     }
+  }
+
+  private maxPowerW(points: PvCurvePoint[]): number {
+    let m = 0;
+    for (const p of points) {
+      if (p.power_w != null) {
+        m = Math.max(m, p.power_w);
+      }
+    }
+    return m;
+  }
+
+  private buildLayoutWithThreshold(title: string): Record<string, unknown> {
+    const thresholdW = this.thresholdKw() * 1000;
+    return {
+      title: { text: title },
+      xaxis: { title: { text: 'Time (HH:MM)' } },
+      yaxis: { title: { text: 'Power (W)' } },
+      margin: { l: 60, r: 20, t: 50, b: 50 },
+      autosize: true,
+      legend: { orientation: 'h', y: -0.15 },
+      shapes: [
+        {
+          type: 'line',
+          xref: 'paper',
+          x0: 0,
+          x1: 1,
+          yref: 'y',
+          y0: thresholdW,
+          y1: thresholdW,
+          line: { color: '#dc2626', width: 1.5, dash: 'dot' },
+        },
+      ],
+    };
+  }
+
+  private applyThresholdView(title?: string): void {
+    if (title !== undefined) {
+      this.chartTitle = title;
+    }
+    if (!this.chartTitle) {
+      this.excessTotalsLabel.set(null);
+      return;
+    }
+    this.graphLayout.set(this.buildLayoutWithThreshold(this.chartTitle));
+
+    if (!this.theoreticalCache || this.theoreticalCache.points.length < 2) {
+      this.excessTotalsLabel.set(null);
+      return;
+    }
+
+    const tW = this.thresholdKw() * 1000;
+    const labelParts: string[] = [
+      `Excess > ${this.thresholdKw().toFixed(1)} kW`,
+    ];
+    const thEx = excessEnergyKwh(this.theoreticalCache.points, tW);
+    labelParts.push(
+      `Theoretical: ${formatKwh(thEx.kwh)}${thEx.partial ? ' (partial)' : ''}`,
+    );
+    if (
+      this.forecastCache &&
+      this.forecastCache.forecast_points.length >= 2
+    ) {
+      const fcEx = excessEnergyKwh(this.forecastCache.forecast_points, tW);
+      labelParts.push(
+        `Forecast: ${formatKwh(fcEx.kwh)}${fcEx.partial ? ' (partial)' : ''}`,
+      );
+    }
+    if (this.actualCache) {
+      const acEx = excessEnergyKwh(this.actualCache.points, tW);
+      labelParts.push(
+        `Actual: ${formatKwh(acEx.kwh)}${acEx.partial ? ' (partial)' : ''}`,
+      );
+    }
+    this.excessTotalsLabel.set(labelParts.join('   ·   '));
   }
 
   private peakPoint(points: PvCurvePoint[]): { time: string; power_w: number } | null {
