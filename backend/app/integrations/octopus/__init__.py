@@ -1,1 +1,1 @@
-"""Future: Octopus Energy (Flux) tariff / import-export optimization (stub)."""
+"""Octopus Energy API helpers."""

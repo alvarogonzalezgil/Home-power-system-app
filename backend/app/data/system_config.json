@@ -10,5 +10,12 @@
   "timezone_offset_h": 1.0,
   "sample_minutes": 5,
   "inverter_sn": "65BH502024FB045",
-  "foxess_power_unit": "kW"
+  "foxess_power_unit": "kW",
+  "octopus_region": "K",
+  "octopus_import_product": "FLUX-IMPORT-23-02-14",
+  "octopus_export_product": "FLUX-EXPORT-23-02-14",
+  "inverter_capacity_kw": 5.0,
+  "battery_capacity_kwh": 5.2,
+  "battery_min_soc_pct": 10.0,
+  "battery_round_trip_efficiency": 0.88
 }

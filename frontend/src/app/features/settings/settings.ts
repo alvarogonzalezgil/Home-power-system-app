@@ -40,6 +40,31 @@ export class Settings implements OnInit {
     sample_minutes: [5, [Validators.required, Validators.min(1), Validators.max(60)]],
     inverter_sn: [''],
     foxess_power_unit: ['kW' as 'kW' | 'W'],
+    octopus_region: [
+      'K',
+      [
+        Validators.required,
+        Validators.pattern(/^[ABCDEFGHJKLMNP]$/i),
+      ],
+    ],
+    octopus_import_product: [
+      'FLUX-IMPORT-23-02-14',
+      [Validators.required, Validators.minLength(3)],
+    ],
+    octopus_export_product: [
+      'FLUX-EXPORT-23-02-14',
+      [Validators.required, Validators.minLength(3)],
+    ],
+    inverter_capacity_kw: [5, [Validators.required, Validators.min(0.1)]],
+    battery_capacity_kwh: [5.2, [Validators.required, Validators.min(0.1)]],
+    battery_min_soc_pct: [
+      10,
+      [Validators.required, Validators.min(0), Validators.max(95)],
+    ],
+    battery_round_trip_efficiency: [
+      0.88,
+      [Validators.required, Validators.min(0.05), Validators.max(1)],
+    ],
   });
 
   ngOnInit(): void {
@@ -49,6 +74,15 @@ export class Settings implements OnInit {
           ...c,
           inverter_sn: c.inverter_sn ?? '',
           foxess_power_unit: c.foxess_power_unit ?? 'kW',
+          octopus_region: c.octopus_region ?? 'K',
+          octopus_import_product:
+            c.octopus_import_product ?? 'FLUX-IMPORT-23-02-14',
+          octopus_export_product:
+            c.octopus_export_product ?? 'FLUX-EXPORT-23-02-14',
+          inverter_capacity_kw: c.inverter_capacity_kw ?? 5,
+          battery_capacity_kwh: c.battery_capacity_kwh ?? 5.2,
+          battery_min_soc_pct: c.battery_min_soc_pct ?? 10,
+          battery_round_trip_efficiency: c.battery_round_trip_efficiency ?? 0.88,
         });
         this.loadError.set(null);
       },
@@ -73,6 +107,9 @@ export class Settings implements OnInit {
       ...raw,
       inverter_sn: raw.inverter_sn?.trim() ? raw.inverter_sn.trim() : null,
       foxess_power_unit: (raw.foxess_power_unit ?? 'kW') as 'kW' | 'W',
+      octopus_region: (raw.octopus_region ?? 'K').trim().toUpperCase(),
+      octopus_import_product: (raw.octopus_import_product ?? '').trim(),
+      octopus_export_product: (raw.octopus_export_product ?? '').trim(),
     } as SystemConfig;
     this.saving.set(true);
     this.system.putConfig(payload).subscribe({

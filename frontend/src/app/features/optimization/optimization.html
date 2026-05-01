@@ -1,0 +1,70 @@
+<section class="optimization">
+  <h1>Optimization (advisory)</h1>
+  <p class="sub">
+    Octopus standing import/export rates (public API — compare with your account) plus weather PV forecast
+    against inverter/battery assumptions from Settings. No inverter control yet.
+  </p>
+
+  <div class="controls">
+    <div class="date-stepper">
+      <label class="date-stepper-label">
+        <span>Date (today … +6 days)</span>
+        <span class="date-stepper-row">
+          <button
+            type="button"
+            class="step-btn"
+            (click)="shiftDay(-1)"
+            [disabled]="!canPrev()"
+            aria-label="Previous day">
+            ←
+          </button>
+          <input
+            type="date"
+            [min]="minIso()"
+            [max]="maxIso()"
+            [ngModel]="dateIso()"
+            (ngModelChange)="onDateIso($event)"
+            aria-label="Optimization date" />
+          <button
+            type="button"
+            class="step-btn"
+            (click)="shiftDay(1)"
+            [disabled]="!canNext()"
+            aria-label="Next day">
+            →
+          </button>
+        </span>
+      </label>
+    </div>
+
+    <span *ngIf="loading()" class="status">Loading…</span>
+  </div>
+
+  <p class="rates-ticker" *ngIf="tickerLine() && !loading()">{{ tickerLine() }}</p>
+
+  <ng-container *ngIf="payload() as res">
+    <p class="tariff-meta">
+      Import tariff code: <code>{{ res.tariff_code_import }}</code>
+      · Export tariff code: <code>{{ res.tariff_code_export }}</code>
+    </p>
+    <p class="totals">{{ estimatesSummary(res.estimates) }}</p>
+    <div class="reco-block">
+      <h2>Recommendations</h2>
+      <article *ngFor="let r of res.recommendations" class="reco">
+        <h3>{{ r.title }}</h3>
+        <p>{{ r.detail }}</p>
+      </article>
+    </div>
+  </ng-container>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <div class="chart-wrap" *ngIf="graphData().length">
+    <plotly-plot
+      [data]="graphData()"
+      [layout]="graphLayout()"
+      [useResizeHandler]="true"
+      [style]="{ position: 'relative', width: '100%', height: '460px' }"
+    />
+  </div>
+</section>
