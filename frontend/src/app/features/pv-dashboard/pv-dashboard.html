@@ -37,6 +37,7 @@
 
   <p *ngIf="error()" class="error">{{ error() }}</p>
   <p *ngIf="foxessBanner()" class="banner">{{ foxessBanner() }}</p>
+  <p *ngIf="forecastBanner()" class="banner">{{ forecastBanner() }}</p>
 
   <div class="chart-wrap" *ngIf="graphData().length">
     <plotly-plot
